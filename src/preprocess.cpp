@@ -105,6 +105,7 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
   }
   uint valid_num = 0;
   
+  // 特征提取（FastLIO2默认不进行特征提取）
   if (feature_enabled)
   {
     for(uint i=1; i<plsize; i++)
@@ -158,6 +159,7 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
   {
     for(uint i=1; i<plsize; i++)
     {
+      // 只取线数在0~N_SCANS内并且回波质量较优的点
       if((msg->points[i].line < N_SCANS) && ((msg->points[i].tag & 0x30) == 0x10 || (msg->points[i].tag & 0x30) == 0x00))
       {
         valid_num ++;
@@ -169,6 +171,8 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg)
           pl_full[i].intensity = msg->points[i].reflectivity;
           pl_full[i].curvature = msg->points[i].offset_time / float(1000000); // use curvature as time of each laser points, curvature unit: ms
 
+          // 只有当当前点和上一点的间距足够大（>1e-7），并且在最小距离阈值之外，才将当前点认为是有用的点，加入到pl_surf队列中
+          // 可以视作为简单的点云降采样
           if(((abs(pl_full[i].x - pl_full[i-1].x) > 1e-7) 
               || (abs(pl_full[i].y - pl_full[i-1].y) > 1e-7)
               || (abs(pl_full[i].z - pl_full[i-1].z) > 1e-7))
